@@ -1,0 +1,10 @@
+data_interfaces:
+  edf: EDFRecordingInterface
+
+experiments:
+  experiment:
+    sessions:
+      - nwbfile_name: sin_wave.nwb
+        source_data:
+          edf:
+            file_path: sin_wave.edf

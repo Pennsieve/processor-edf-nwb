@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  processor_edf_nwb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - dev.env
+    volumes:
+      - ./data/input:/data/input
+      - ./data/output:/data/output
