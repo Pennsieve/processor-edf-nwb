@@ -1,7 +1,11 @@
 FROM ghcr.io/catalystneuro/neuroconv:latest
 
-WORKDIR /run
+RUN apt-get update && apt-get install -y gettext
 
-COPY neuroconv_edf.yml /run/neuroconv_edf.yml
+WORKDIR /app
 
-CMD ["neuroconv", "neuroconv_edf.yml", "--overwrite", "--data-folder-path", "/data/input/", "--output-folder-path", "/data/output/"]
+COPY neuroconv_edf.template.yml /app/neuroconv_edf.template.yml
+
+COPY --chmod=755 entrypoint.sh /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]
