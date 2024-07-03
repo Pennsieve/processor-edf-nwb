@@ -1,0 +1,10 @@
+data_interfaces:
+  edf: EDFRecordingInterface
+
+experiments:
+  experiment:
+    sessions:
+      - nwbfile_name: ${OUTPUT_FILE}
+        source_data:
+          edf:
+            file_path: ${INPUT_FILE}
