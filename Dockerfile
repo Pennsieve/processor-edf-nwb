@@ -1,4 +1,4 @@
-FROM ghcr.io/catalystneuro/neuroconv:latest
+FROM ghcr.io/catalystneuro/neuroconv:v0.6.1
 
 RUN apt-get update && apt-get install -y gettext
 
