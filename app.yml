@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=https://app.pennsieve.io/static/schemas/app-manifest.v1.json
+schemaVersion: "1.0"
+
+name: EDF to NWB
+description: >-
+  Converts an EDF/EDF+ recording into an NWB file using neuroconv's
+  EDFRecordingInterface. The processor picks up the single .edf file in the
+  input directory and writes a matching .nwb file to the output directory.
+applicationType: processor
+categories:
+  - Format Conversion
+tags:
+  - edf
+  - nwb
+  - eeg
+  - electrophysiology
+  - neuroconv
+  - format-conversion
+
+runtime:
+  computeTypes:
+    - standard
+  gpu:
+    enabled: false
+
+resources:
+  cpu: 2048
+  memory: 8192
+
+parameters:
+  - name: DATA_REPRESENTATION
+    label: Sample data representation
+    description: >-
+      How ElectricalSeries samples are stored. Clinical EDF exporters autoscale
+      each channel independently, giving a slightly different offset per channel,
+      while an NWB ElectricalSeries stores only one scalar offset. physical_units
+      folds each channel's gain and offset into the samples and stores float
+      physical values, which is always safe. digital_counts keeps the raw integer
+      samples and is only valid when every channel shares the same offset.
+    type: enum
+    required: false
+    default: physical_units
+    allowedValues:
+      - physical_units
+      - digital_counts
+
+  - name: TZ
+    label: Recording-site timezone
+    description: >-
+      IANA timezone name (e.g. America/New_York) used to interpret the EDF
+      header's naive start time when writing session_start_time. Leave as UTC if
+      the recording site is unknown. The header digits are preserved verbatim, so
+      the timestamp can later be corrected by a uniform shift. How the start time
+      was interpreted is recorded in the NWBFile data_collection field.
+    type: string
+    required: false
+    default: UTC
+
+inputs:
+  - name: input
+    dataType: file
+    required: true
+    description: EDF or EDF+ recording. The first .edf file in the input directory is converted.
+
+outputs:
+  - name: output
+    dataType: file
+    description: NWB file named after the input recording (<input>.nwb).
