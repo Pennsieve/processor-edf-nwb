@@ -1,6 +1,10 @@
 data_interfaces:
   edf: EDFRecordingInterface
 
+metadata:
+  NWBFile:
+    data_collection: '${SESSION_TIME_PROVENANCE}'
+
 experiments:
   experiment:
     sessions:
@@ -8,3 +12,6 @@ experiments:
         source_data:
           edf:
             file_path: ${INPUT_FILE}
+        conversion_options:
+          edf:
+            data_representation: ${DATA_REPRESENTATION}
