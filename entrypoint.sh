@@ -1,16 +1,28 @@
 #!/bin/sh
+set -eu
 
-EDF_FILE=$(find $INPUT_DIR -maxdepth 1 -type f -iname '*.edf' | head -n 1)
+: "${INPUT_DIR:?INPUT_DIR must be set}"
+: "${OUTPUT_DIR:?OUTPUT_DIR must be set}"
 
-if [ -n "$EDF_FILE" ]; then
-    export INPUT_FILE=$(basename "$EDF_FILE")
-    echo "INPUT_FILE=${INPUT_FILE}"
-else
-    echo "No EDF files found in INPUT_DIR=$INPUT_DIR"
+# The container may run as a non-root user, in which case /app and the default
+# HOME are not writable. Keep every runtime write inside one scratch directory:
+# the rendered config, plus the caches that neuroconv's dependencies create when
+# they are imported.
+SCRATCH_DIR="${TMPDIR:-/tmp}/edf-nwb"
+export HOME="$SCRATCH_DIR"
+export XDG_CACHE_HOME="$SCRATCH_DIR/cache"
+mkdir -p "$XDG_CACHE_HOME"
+
+EDF_FILE=$(find "$INPUT_DIR" -maxdepth 1 -type f -iname '*.edf' | head -n 1)
+if [ -z "$EDF_FILE" ]; then
+    echo "No EDF file found in INPUT_DIR=$INPUT_DIR" >&2
+    exit 1
 fi
 
-BASE_NAME="${INPUT_FILE%.*}"
-export OUTPUT_FILE="${BASE_NAME}.nwb"
+INPUT_FILE=$(basename "$EDF_FILE")
+OUTPUT_FILE="${INPUT_FILE%.*}.nwb"
+export INPUT_FILE OUTPUT_FILE
+echo "INPUT_FILE=${INPUT_FILE}"
 echo "OUTPUT_FILE=${OUTPUT_FILE}"
 
 # Clinical EDF exporters autoscale each channel independently, which yields a
@@ -35,8 +47,9 @@ fi
 export SESSION_TIME_PROVENANCE
 echo "TZ=${SESSION_TZ}"
 
-envsubst < /app/neuroconv_edf.template.yml > /app/neuroconv_edf.yml
+CONFIG_FILE="$SCRATCH_DIR/neuroconv_edf.yml"
+envsubst < /app/neuroconv_edf.template.yml > "$CONFIG_FILE"
 
-neuroconv /app/neuroconv_edf.yml --overwrite \
-    --data-folder-path $INPUT_DIR \
-    --output-folder-path $OUTPUT_DIR
+neuroconv "$CONFIG_FILE" --overwrite \
+    --data-folder-path "$INPUT_DIR" \
+    --output-folder-path "$OUTPUT_DIR"
