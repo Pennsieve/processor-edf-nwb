@@ -8,10 +8,13 @@ FROM ghcr.io/catalystneuro/neuroconv:v0.9.3
 # DST-aware), e.g. TZ=America/New_York.
 ENV TZ=UTC
 
+# pynwb writes its type-map cache under the user cache directory (~/.cache) the
+# first time it is imported. The container may run as a non-root user whose HOME
+# is not writable, so point HOME at a scratch path; pynwb creates it on demand.
+ENV HOME=/tmp/edf-nwb
+
 WORKDIR /app
 
 COPY convert_edf.py /app/convert_edf.py
 
-COPY --chmod=755 entrypoint.sh /app/entrypoint.sh
-
-ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["python", "/app/convert_edf.py"]

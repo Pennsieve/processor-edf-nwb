@@ -9,5 +9,14 @@ of channel labels to write as `TimeSeries` even when the EDF has them labeled wi
 
 All supported parameters are described in `app.yml`.
 
-Running `make run` locally will run the processor on an `.edf` file in `data/input`
-and output an `.nwb` file into `data/output`.
+## Usage
+
+Convert one file directly:
+
+```bash
+python convert_edf.py recording.edf recording.nwb
+```
+
+With no arguments the script follows the processor convention and converts the
+first `.edf` file in `INPUT_DIR` and writes `OUTPUT_DIR/<input>.nwb`. `make run`
+sets `INPUT_DIR=data/input/` and `OUTPUT_DIR=data/output/`.

@@ -1,11 +1,14 @@
 """Convert one EDF or EDF+ recording into an NWB file.
 
-Voltage signals, those whose physical dimension is a volt unit, become one
-ElectricalSeries per sample rate through neuroconv's EDF interface. Every other
-signal becomes a TimeSeries in acquisition carrying its own unit. The
-NON_NEURAL_CHANNELS environment variable names further labels to treat as
-non-voltage, for exporters that stamp microvolts on respiratory, position, or
-auxiliary inputs.
+Voltage signals, those whose physical dimension is a volt unit, are written as 
+ElectricalSeries, per sample rate, using neuroconv's EDF interface, in volts.
+Every other signal becomes a TimeSeries in its given unit.
+
+Run with an EDF path and an NWB path, or with neither to follow the Pennsieve
+processor convention where the first .edf file in INPUT_DIR is converted and the
+result is written to OUTPUT_DIR under the same name with an .nwb suffix.
+Parameters arrive as environment variables, each described in app.yml:
+DATA_REPRESENTATION, NON_NEURAL_CHANNELS, and TZ.
 """
 
 from __future__ import annotations
@@ -13,6 +16,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 import numpy as np
@@ -27,6 +31,9 @@ from pynwb import TimeSeries
 
 VOLTAGE_UNITS = frozenset({"uv", "mv", "v"})
 """Physical dimensions, lowercased, that an ElectricalSeries can carry."""
+
+UTC_NAMES = frozenset({"UTC", "Etc/UTC"})
+"""TZ values that mean no recording-site timezone was supplied."""
 
 
 def parse_label_list(value: str) -> set[str]:
@@ -54,6 +61,29 @@ def describe_signal(header: dict) -> str:
     transducer = str(header.get("transducer", "")).strip() or "n/a"
     prefilter = str(header.get("prefilter", "")).strip() or "n/a"
     return f"EDF signal. transducer: {transducer}; prefilter: {prefilter}"
+
+
+def session_time_provenance(tz_name: str) -> str:
+    """Return the data_collection note recording how the EDF start time was read.
+
+    EDF stores the start time as a naive local wall clock, and pynwb stamps the
+    process's local timezone on it. The Dockerfile pins TZ=UTC, so any other
+    value means the deployment supplied the recording site.
+    """
+    if tz_name in UTC_NAMES:
+        return (
+            "EDF records the recording start time as a local wall clock without "
+            "timezone information. No recording-site timezone was configured for "
+            "this conversion, so session_start_time was interpreted as UTC. The "
+            "date and time digits from the EDF header are preserved verbatim, so "
+            "if the recording-site timezone is established later, "
+            "session_start_time can be corrected by a uniform shift."
+        )
+    return (
+        "EDF records the recording start time as a local wall clock without "
+        f"timezone information. This conversion was configured with TZ={tz_name}, "
+        "so session_start_time was interpreted in that timezone."
+    )
 
 
 def voltage_interfaces(
@@ -94,7 +124,7 @@ def convert(
     *,
     data_representation: str,
     forced_non_voltage: set[str],
-    provenance: str | None,
+    provenance: str,
 ) -> None:
     """Write nwb_path from edf_path, replacing any file already there."""
     reader = pyedflib.EdfReader(str(edf_path))
@@ -124,8 +154,7 @@ def convert(
         metadata["Ecephys"]["ElectricalSeries"][interface.metadata_key]["name"] = (
             series_name(rate_hz, single_rate=len(interfaces) == 1)
         )
-    if provenance:
-        metadata["NWBFile"]["data_collection"] = provenance
+    metadata["NWBFile"]["data_collection"] = provenance
 
     nwbfile = make_nwbfile_from_metadata(metadata)
     for interface, _ in interfaces:
@@ -164,19 +193,76 @@ def convert(
         print(f"  TimeSeries {header['label']} [{str(header['dimension']).strip() or 'n/a'}]")
 
 
+def first_edf(input_dir: Path) -> Path:
+    """Return the first .edf file in input_dir by name, matching the suffix case-insensitively.
+
+    Raises FileNotFoundError when input_dir holds none.
+    """
+    edfs = sorted(
+        path
+        for path in input_dir.iterdir()
+        if path.is_file() and path.suffix.lower() == ".edf"
+    )
+    if not edfs:
+        raise FileNotFoundError(f"No EDF file found in INPUT_DIR={input_dir}")
+    return edfs[0]
+
+
+def paths_from_env(env: Mapping[str, str]) -> tuple[Path, Path]:
+    """Return the (EDF, NWB) paths the processor convention names.
+
+    The EDF is the first .edf file in INPUT_DIR; the NWB takes its name with an
+    .nwb suffix inside OUTPUT_DIR. Raises KeyError when either variable is
+    missing and FileNotFoundError when INPUT_DIR holds no EDF.
+    """
+    for name in ("INPUT_DIR", "OUTPUT_DIR"):
+        if not env.get(name):
+            raise KeyError(f"{name} must be set")
+    edf_path = first_edf(Path(env["INPUT_DIR"]))
+    return edf_path, Path(env["OUTPUT_DIR"]) / edf_path.with_suffix(".nwb").name
+
+
 def main(argv: list[str]) -> int:
-    """Run one conversion from the command line."""
+    """Run one conversion from the command line and return an exit code."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("edf", type=Path, help="EDF or EDF+ recording to convert")
-    parser.add_argument("nwb", type=Path, help="NWB file to write")
+    parser.add_argument(
+        "edf", nargs="?", type=Path,
+        help="EDF or EDF+ recording to convert; default: the first .edf in INPUT_DIR",
+    )
+    parser.add_argument(
+        "nwb", nargs="?", type=Path,
+        help="NWB file to write; default: OUTPUT_DIR/<edf name>.nwb",
+    )
     args = parser.parse_args(argv)
+    if (args.edf is None) != (args.nwb is None):
+        parser.error("give both the EDF and NWB paths, or neither")
+
+    if args.edf is None:
+        try:
+            edf_path, nwb_path = paths_from_env(os.environ)
+        except (KeyError, FileNotFoundError) as error:
+            print(error.args[0], file=sys.stderr)
+            return 2
+    else:
+        edf_path, nwb_path = args.edf, args.nwb
+
+    # An empty variable counts as unset, matching how the run form leaves a blank field.
+    data_representation = os.environ.get("DATA_REPRESENTATION") or "physical_units"
+    tz_name = os.environ.get("TZ") or "UTC"
+    non_neural_channels = os.environ.get("NON_NEURAL_CHANNELS") or ""
+
+    print(f"INPUT_FILE={edf_path.name}")
+    print(f"OUTPUT_FILE={nwb_path.name}")
+    print(f"DATA_REPRESENTATION={data_representation}")
+    print(f"TZ={tz_name}")
+    print(f"NON_NEURAL_CHANNELS={non_neural_channels}")
 
     convert(
-        args.edf,
-        args.nwb,
-        data_representation=os.environ.get("DATA_REPRESENTATION", "physical_units"),
-        forced_non_voltage=parse_label_list(os.environ.get("NON_NEURAL_CHANNELS", "")),
-        provenance=os.environ.get("SESSION_TIME_PROVENANCE") or None,
+        edf_path,
+        nwb_path,
+        data_representation=data_representation,
+        forced_non_voltage=parse_label_list(non_neural_channels),
+        provenance=session_time_provenance(tz_name),
     )
     return 0
 
