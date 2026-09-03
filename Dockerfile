@@ -1,7 +1,5 @@
 FROM ghcr.io/catalystneuro/neuroconv:v0.9.3
 
-RUN apt-get update && apt-get install -y gettext
-
 # EDF stores the recording's local wall clock with no timezone, so pynwb stamps
 # whatever the container's local zone is. Fix that to UTC so the same EDF always
 # produces the same session_start_time: the header digits are preserved verbatim
@@ -12,7 +10,7 @@ ENV TZ=UTC
 
 WORKDIR /app
 
-COPY neuroconv_edf.template.yml /app/neuroconv_edf.template.yml
+COPY convert_edf.py /app/convert_edf.py
 
 COPY --chmod=755 entrypoint.sh /app/entrypoint.sh
 

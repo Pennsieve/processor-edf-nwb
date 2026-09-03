@@ -47,9 +47,11 @@ fi
 export SESSION_TIME_PROVENANCE
 echo "TZ=${SESSION_TZ}"
 
-CONFIG_FILE="$SCRATCH_DIR/neuroconv_edf.yml"
-envsubst < /app/neuroconv_edf.template.yml > "$CONFIG_FILE"
+# Signals whose physical dimension is a volt unit go into an ElectricalSeries; every
+# other signal becomes a TimeSeries in its own unit. Exporters such as Natus stamp
+# microvolts on respiratory, position, and DC inputs, so this comma-separated list of
+# labels forces those into TimeSeries too.
+export NON_NEURAL_CHANNELS="${NON_NEURAL_CHANNELS:-}"
+echo "NON_NEURAL_CHANNELS=${NON_NEURAL_CHANNELS}"
 
-neuroconv "$CONFIG_FILE" --overwrite \
-    --data-folder-path "$INPUT_DIR" \
-    --output-folder-path "$OUTPUT_DIR"
+python /app/convert_edf.py "$EDF_FILE" "$OUTPUT_DIR/$OUTPUT_FILE"
