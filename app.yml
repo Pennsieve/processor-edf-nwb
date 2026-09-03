@@ -3,9 +3,12 @@ schemaVersion: "1.0"
 
 name: EDF to NWB
 description: >-
-  Converts an EDF/EDF+ recording into an NWB file using neuroconv's
-  EDFRecordingInterface. The processor picks up the single .edf file in the
-  input directory and writes a matching .nwb file to the output directory.
+  Converts an EDF/EDF+ recording into an NWB file. Signals recorded in volts
+  become ElectricalSeries through neuroconv's EDFRecordingInterface (one per
+  sample rate). Every other signal (e.g. oximetry, pulse, pressure, etc.)
+  becomes a TimeSeries in its own unit. The processor picks up a single .edf
+  file in the input directory and writes a matching .nwb file to the output
+  directory.
 applicationType: processor
 categories:
   - Format Conversion
@@ -43,6 +46,18 @@ parameters:
     allowedValues:
       - physical_units
       - digital_counts
+
+  - name: NON_NEURAL_CHANNELS
+    label: Non-neural channel labels
+    description: >-
+      Comma-separated EDF signal labels to write as TimeSeries even though their
+      physical dimension is a volt unit. Clinical exporters often stamp microvolts
+      on respiratory effort, airflow, position, and DC auxiliary inputs. Signals
+      whose dimension is not a volt unit become TimeSeries despite inclusion in
+      this list.
+    type: string
+    required: false
+    default: ""
 
   - name: TZ
     label: Recording-site timezone
