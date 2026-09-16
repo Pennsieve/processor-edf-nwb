@@ -11,12 +11,21 @@ All supported parameters are described in `app.yml`.
 
 ## Usage
 
-Convert one file directly:
+Convert one file directly, from the repository root or anywhere `edf_nwb` is importable:
 
 ```bash
-python convert_edf.py recording.edf recording.nwb
+python -m edf_nwb.main recording.edf recording.nwb
 ```
 
-With no arguments the script follows the processor convention and converts the
-first `.edf` file in `INPUT_DIR` and writes `OUTPUT_DIR/<input>.nwb`. `make run`
-sets `INPUT_DIR=data/input/` and `OUTPUT_DIR=data/output/`.
+With no arguments the converter follows the processor convention instead: it converts
+the first `.edf` file in `INPUT_DIR` and writes `OUTPUT_DIR/<input>.nwb`. This is how the
+container runs.
+
+```bash
+make run        # docker-compose build + up, against data/input and data/output
+```
+
+## Layout
+
+`edf_nwb/` holds the package; `edf_nwb/main.py` is both the conversion logic and the
+command-line entry point.

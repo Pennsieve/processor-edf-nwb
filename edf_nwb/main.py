@@ -4,9 +4,10 @@ Voltage signals, those whose physical dimension is a volt unit, are written as
 ElectricalSeries, per sample rate, using neuroconv's EDF interface, in volts.
 Every other signal becomes a TimeSeries in its given unit.
 
-Run with an EDF path and an NWB path, or with neither to follow the Pennsieve
-processor convention where the first .edf file in INPUT_DIR is converted and the
-result is written to OUTPUT_DIR under the same name with an .nwb suffix.
+Run as python -m edf_nwb.main with an EDF path and an NWB path, or with neither
+to follow the Pennsieve processor convention where the first .edf file in
+INPUT_DIR is converted and the result is written to OUTPUT_DIR under the same
+name with an .nwb suffix. The container runs the no-argument form.
 Parameters arrive as environment variables, each described in app.yml:
 DATA_REPRESENTATION, NON_NEURAL_CHANNELS, and TZ.
 """
@@ -224,7 +225,10 @@ def paths_from_env(env: Mapping[str, str]) -> tuple[Path, Path]:
 
 def main(argv: list[str]) -> int:
     """Run one conversion from the command line and return an exit code."""
-    parser = argparse.ArgumentParser(description=__doc__)
+    # argparse would otherwise name the module file, which is not how it is run.
+    parser = argparse.ArgumentParser(
+        prog="python -m edf_nwb.main", description=__doc__
+    )
     parser.add_argument(
         "edf", nargs="?", type=Path,
         help="EDF or EDF+ recording to convert; default: the first .edf in INPUT_DIR",

@@ -15,6 +15,10 @@ ENV HOME=/tmp/edf-nwb
 
 WORKDIR /app
 
-COPY convert_edf.py /app/convert_edf.py
+COPY edf_nwb/ /app/edf_nwb
 
-CMD ["python", "/app/convert_edf.py"]
+# The package is imported by name rather than run as a path, so /app has to be
+# importable whatever directory the container is started in.
+ENV PYTHONPATH=/app
+
+CMD ["python", "-m", "edf_nwb.main"]
