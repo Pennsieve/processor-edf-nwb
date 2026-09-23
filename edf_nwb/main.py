@@ -114,6 +114,18 @@ def voltage_interfaces(
     return interfaces
 
 
+def header_metadata(edf_path: Path) -> dict:
+    """Return neuroconv's session and subject metadata read from the EDF header.
+
+    neo splits an EDF into one stream per sample rate and refuses to open a
+    reader without a stream when the file has several, so the header is read
+    through the first stream. Session and subject metadata are the same
+    whichever stream reads them.
+    """
+    stream_name = next(iter(EDFRecordingInterface.get_stream_names(edf_path)))
+    return EDFRecordingInterface(file_path=edf_path, stream_name=stream_name).get_metadata()
+
+
 def series_name(rate_hz: float, single_rate: bool) -> str:
     """Return the ElectricalSeries name for a rate: plain when the file has one rate."""
     return "ElectricalSeries" if single_rate else f"ElectricalSeries{rate_hz:g}Hz"
@@ -148,8 +160,7 @@ def convert(
 
     interfaces = voltage_interfaces(edf_path, voltage_labels)
 
-    # Session and subject metadata come from the header whichever stream reads it.
-    metadata = EDFRecordingInterface(file_path=edf_path).get_metadata()
+    metadata = header_metadata(edf_path)
     for interface, rate_hz in interfaces:
         metadata = dict_deep_update(metadata, interface.get_metadata())
         metadata["Ecephys"]["ElectricalSeries"][interface.metadata_key]["name"] = (
