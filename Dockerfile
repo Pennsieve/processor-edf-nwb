@@ -20,6 +20,12 @@ ENV TZ=UTC
 # is not writable, so point HOME at a scratch path; pynwb creates it on demand.
 ENV HOME=/tmp/edf-nwb
 
+# Without a TTY, as under Fargate's log driver, Python block-buffers stdout, and
+# whatever is still buffered when the process is killed never reaches the logs.
+# The processor logs to stderr, one flushed line per record; this covers any
+# library that prints to stdout.
+ENV PYTHONUNBUFFERED=1
+
 WORKDIR /app
 
 COPY edf_nwb/ /app/edf_nwb

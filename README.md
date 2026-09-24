@@ -9,6 +9,10 @@ of channel labels to write as `TimeSeries` even when the EDF has them labeled wi
 
 All supported parameters are described in `app.yml`.
 
+The processor logs to stderr. Set `LOG_LEVEL=DEBUG` for per-signal detail, memory use
+at each step, and a progress line every 15 seconds. On SIGTERM, which Fargate sends
+when it stops a task, the processor logs the step it was in and a stack trace, then exits.
+
 ## Usage
 
 Convert one file directly, from the repository root or anywhere `edf_nwb` is importable:

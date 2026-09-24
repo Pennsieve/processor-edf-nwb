@@ -71,6 +71,20 @@ parameters:
     required: false
     default: UTC
 
+  - name: LOG_LEVEL
+    label: Log level
+    description: >-
+      Verbosity of the processor's log. INFO logs each conversion step and the
+      container's memory limit. DEBUG adds every signal's unit, rate, and
+      destination, memory use at each step, and a progress line every 15
+      seconds, which tells a stopped or hung run from one killed for memory.
+    type: enum
+    required: false
+    default: INFO
+    allowedValues:
+      - INFO
+      - DEBUG
+
 inputs:
   - name: input
     dataType: file
