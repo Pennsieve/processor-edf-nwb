@@ -1,97 +1,41 @@
-# yaml-language-server: $schema=https://app.pennsieve.io/static/schemas/app-manifest.v1.json
-schemaVersion: "1.0"
-
-name: EDF to NWB
-description: >-
-  Converts an EDF/EDF+ recording into an NWB file. Signals recorded in volts
-  become ElectricalSeries through neuroconv's EDFRecordingInterface (one per
-  sample rate). Every other signal (e.g. oximetry, pulse, pressure, etc.)
-  becomes a TimeSeries in its own unit. The processor picks up a single .edf
-  file in the input directory and writes a matching .nwb file to the output
-  directory.
-applicationType: processor
-categories:
-  - Format Conversion
-tags:
-  - edf
-  - nwb
-  - eeg
-  - electrophysiology
-  - neuroconv
-  - format-conversion
-
+# yaml-language-server: $schema=https://schemas.pennsieve.io/app-manifest/v1.json
+schemaVersion: '1.0'
+application:
+  name: processor-edf-nwb
+  description: Pennsieve workflow processor (Docker) converting EDF/EDF+ recordings to NWB with neuroconv
+  type: processor
+  maintainers:
+    - name: Joost Wagenaar
+      email: joostw@seas.upenn.edu
+      orcid: 0009-0004-5925-5451
+  tags:
+    - eeg
+    - electrophysiology
+    - time-series
 runtime:
   computeTypes:
     - standard
-  gpu:
-    enabled: false
-
-resources:
-  cpu: 2048
-  memory: 8192
-
 parameters:
   - name: DATA_REPRESENTATION
-    label: Sample data representation
-    description: >-
-      How ElectricalSeries samples are stored. Clinical EDF exporters autoscale
-      each channel independently, giving a slightly different offset per channel,
-      while an NWB ElectricalSeries stores only one scalar offset. physical_units
-      folds each channel's gain and offset into the samples and stores float
-      physical values, which is always safe. digital_counts keeps the raw integer
-      samples and is only valid when every channel shares the same offset.
-    type: enum
-    required: false
-    default: physical_units
-    allowedValues:
-      - physical_units
-      - digital_counts
-
+    type: string
+    description: How ElectricalSeries samples are stored. Clinical EDF exporters autoscale each channel independently, giving a slightly different offset per channel, while an NWB ElectricalSeries stores only one scalar offset. physical_units folds each channel's gain and offset into the samples and stores float physical values, which is always safe. digital_counts keeps the raw integer samples and is only valid when every channel shares the same offset.
   - name: NON_NEURAL_CHANNELS
-    label: Non-neural channel labels
-    description: >-
-      Comma-separated EDF signal labels to write as TimeSeries even though their
-      physical dimension is a volt unit. Clinical exporters often stamp microvolts
-      on respiratory effort, airflow, position, and DC auxiliary inputs. Signals
-      whose dimension is not a volt unit become TimeSeries despite inclusion in
-      this list.
     type: string
-    required: false
-    default: ""
-
+    description: Comma-separated EDF signal labels to write as TimeSeries even though their physical dimension is a volt unit. Clinical exporters often stamp microvolts on respiratory effort, airflow, position, and DC auxiliary inputs. Signals whose dimension is not a volt unit become TimeSeries despite inclusion in this list.
   - name: TZ
-    label: Recording-site timezone
-    description: >-
-      IANA timezone name (e.g. America/New_York) used to interpret the EDF
-      header's naive start time when writing session_start_time. Leave as UTC if
-      the recording site is unknown. The header digits are preserved verbatim, so
-      the timestamp can later be corrected by a uniform shift. How the start time
-      was interpreted is recorded in the NWBFile data_collection field.
     type: string
-    required: false
-    default: UTC
-
+    description: IANA timezone name (e.g. America/New_York) used to interpret the EDF header's naive start time when writing session_start_time. Leave as UTC if the recording site is unknown. The header digits are preserved verbatim, so the timestamp can later be corrected by a uniform shift. How the start time was interpreted is recorded in the NWBFile data_collection field.
   - name: LOG_LEVEL
-    label: Log level
-    description: >-
-      Verbosity of the processor's log. INFO logs each conversion step and the
-      container's memory limit. DEBUG adds every signal's unit, rate, and
-      destination, memory use at each step, and a progress line every 15
-      seconds, which tells a stopped or hung run from one killed for memory.
-    type: enum
-    required: false
-    default: INFO
-    allowedValues:
-      - INFO
-      - DEBUG
-
+    type: string
+    description: Verbosity of the processor's log. INFO logs each conversion step and the container's memory limit. DEBUG adds every signal's unit, rate, and destination, memory use at each step, and a progress line every 15 seconds, which tells a stopped or hung run from one killed for memory.
 inputs:
-  - name: input
-    dataType: file
+  - name: EDF Timeseries
+    description: European Data Format biosignal timeseries.
+    mediaTypes:
+      - application/vnd.pennsieve.edf
     required: true
-    description: EDF or EDF+ recording. The first .edf file in the input directory is converted.
-
 outputs:
-  - name: output
-    dataType: file
-    description: NWB file named after the input recording (<input>.nwb).
+  - name: HDF5
+    description: Hierarchical Data Format version 5.
+    mediaTypes:
+      - application/x-hdf5
