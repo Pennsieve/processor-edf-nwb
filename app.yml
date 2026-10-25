@@ -1,34 +1,27 @@
-# yaml-language-server: $schema=https://app.pennsieve.io/static/schemas/app-manifest.v1.json
-schemaVersion: "1.0"
-
-name: EDF to NWB
-description: >-
-  Converts an EDF/EDF+ recording into an NWB file. Signals recorded in volts
-  become ElectricalSeries through neuroconv's EDFRecordingInterface (one per
-  sample rate). Every other signal (e.g. oximetry, pulse, pressure, etc.)
-  becomes a TimeSeries in its own unit. The processor picks up a single .edf
-  file in the input directory and writes a matching .nwb file to the output
-  directory.
-applicationType: processor
-categories:
-  - Format Conversion
-tags:
-  - edf
-  - nwb
-  - eeg
-  - electrophysiology
-  - neuroconv
-  - format-conversion
+# yaml-language-server: $schema=https://schemas.pennsieve.io/app-manifest/v1.json
+application:
+  name: EDF to NWB
+  description: >-
+    Converts an EDF/EDF+ recording into an NWB file. Signals recorded in volts
+    become ElectricalSeries through neuroconv's EDFRecordingInterface (one per
+    sample rate). Every other signal (e.g. oximetry, pulse, pressure, etc.)
+    becomes a TimeSeries in its own unit. The processor picks up a single .edf
+    file in the input directory and writes a matching .nwb file to the output
+    directory.
+  type: processor
+  tags:
+    - eeg
+    - electrophysiology
+    - edf
+    - nwb
+    - neuroconv
+    - format-conversion
 
 runtime:
-  computeTypes:
-    - standard
-  gpu:
-    enabled: false
-
-resources:
   cpu: 2048
   memory: 8192
+  computeTypes:
+    - standard
 
 parameters:
   - name: DATA_REPRESENTATION
@@ -40,10 +33,10 @@ parameters:
       folds each channel's gain and offset into the samples and stores float
       physical values, which is always safe. digital_counts keeps the raw integer
       samples and is only valid when every channel shares the same offset.
-    type: enum
+    type: string
     required: false
-    default: physical_units
-    allowedValues:
+    defaultValue: physical_units
+    validValues:
       - physical_units
       - digital_counts
 
@@ -57,7 +50,7 @@ parameters:
       this list.
     type: string
     required: false
-    default: ""
+    defaultValue: ""
 
   - name: TZ
     label: Recording-site timezone
@@ -69,7 +62,7 @@ parameters:
       was interpreted is recorded in the NWBFile data_collection field.
     type: string
     required: false
-    default: UTC
+    defaultValue: UTC
 
   - name: LOG_LEVEL
     label: Log level
@@ -78,20 +71,18 @@ parameters:
       container's memory limit. DEBUG adds every signal's unit, rate, and
       destination, memory use at each step, and a progress line every 15
       seconds, which tells a stopped or hung run from one killed for memory.
-    type: enum
+    type: string
     required: false
-    default: INFO
-    allowedValues:
+    defaultValue: INFO
+    validValues:
       - INFO
       - DEBUG
 
 inputs:
   - name: input
-    dataType: file
-    required: true
     description: EDF or EDF+ recording. The first .edf file in the input directory is converted.
+    required: true
 
 outputs:
   - name: output
-    dataType: file
     description: NWB file named after the input recording (<input>.nwb).
