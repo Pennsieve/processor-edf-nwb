@@ -35,7 +35,7 @@ inputs:
       - application/vnd.pennsieve.edf
     required: true
 outputs:
-  - name: HDF5
-    description: Hierarchical Data Format version 5.
+  - name: neurodata-without-borders
+    description: NWB neurophysiology data (HDF5-based).
     mediaTypes:
-      - application/x-hdf5
+      - application/x-hdf5; profile=nwb
